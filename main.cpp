@@ -2,300 +2,236 @@
 #include <vector>
 #include <string>
 #include <fstream>
-#include <sstream>
 
 using namespace std;
 
-struct Ingredient {
+struct Product {
     string name;
-    double price;
+    int price;
 };
 
 class Pizza {
-protected:
-    string name;
-    vector<Ingredient> ingredients;
-
 public:
-    Pizza(string n) {
-        name = n;
-    }
+    string name;
+    vector<string> ingredients;
+    int price;
 
+    Pizza() { price = 0; }
     virtual ~Pizza() {}
 
-    void addIngredient(Ingredient ing) {
-        ingredients.push_back(ing);
-    }
-
-    string getName() const {
-        return name;
-    }
-
-    vector<Ingredient> getIngredients() const {
-        return ingredients;
-    }
-
-    virtual double getPrice() const {
-        double total = 50.0; 
-        for (size_t i = 0; i < ingredients.size(); i++) {
-            total += ingredients[i].price;
+    virtual void show() {
+        cout << name << " | Ціна: " << price << " | Склад: ";
+        for (int i = 0; i < ingredients.size(); i++) {
+            cout << ingredients[i] << " ";
         }
-        return total;
-    }
-
-    virtual void show() const {
-        cout << "Піца: " << name << " | Склад: ";
-        if (ingredients.empty()) {
-            cout << "основа";
-        } else {
-            for (size_t i = 0; i < ingredients.size(); i++) {
-                cout << ingredients[i].name << (i == ingredients.size() - 1 ? "" : ", ");
-            }
-        }
-        cout << " | Вартість: " << getPrice() << " грн" << endl;
-    }
-    
-    bool containsIngredient(const string& ingName) const {
-        for (const auto& ing : ingredients) {
-            if (ing.name == ingName) return true;
-        }
-        return false;
+        cout << endl;
     }
 };
 
 class StandardPizza : public Pizza {
 public:
-    StandardPizza(string n) : Pizza(n) {}
+    StandardPizza(string n, int p) {
+        name = n;
+        price = p;
+    }
 };
 
 class CustomPizza : public Pizza {
 public:
-    CustomPizza() : Pizza("Кастомна піца (Зібрана клієнтом)") {}
+    CustomPizza() {
+        name = "Кастомна піца";
+        price = 20; 
+    }
+    void addIngredient(Product p) {
+        ingredients.push_back(p.name);
+        price += p.price;
+    }
 };
 
 class Pizzeria {
-private:
+public:
     vector<Pizza*> menu;
-    vector<Ingredient> availableIngredients;
+    vector<Product> products;
     vector<Pizza*> order;
 
-public:
-    Pizzeria() {
-        availableIngredients.push_back({"Сир", 20.0});
-        availableIngredients.push_back({"Ковбаса", 30.0});
-        availableIngredients.push_back({"Гриби", 15.0});
-        availableIngredients.push_back({"Помідори", 10.0});
+    void addProduct() {
+        Product p;
+        cout << "Назва: ";
+        cin >> p.name;
+        cout << "Ціна: ";
+        cin >> p.price;
+        products.push_back(p);
     }
 
-    ~Pizzeria() {
-        for (auto p : menu) delete p;
-        for (auto p : order) delete p;
+    void removeProduct() {
+        int id;
+        cout << "Номер для видалення: ";
+        cin >> id;
+        products.erase(products.begin() + id - 1);
     }
 
-    void addPizzaToMenu(Pizza* p) {
-        menu.push_back(p);
+    void editProduct() {
+        int id;
+        cout << "Номер для редагування: ";
+        cin >> id;
+        cout << "Нова назва: ";
+        cin >> products[id - 1].name;
+        cout << "Нова ціна: ";
+        cin >> products[id - 1].price;
     }
 
-    void showMenu() const {
-        cout << "\n--- МЕНЮ ПІЦЕРІЇ ---" << endl;
-        if (menu.empty()) cout << "Меню порожнє." << endl;
-        for (size_t i = 0; i < menu.size(); i++) {
+    void addPizza() {
+        string n;
+        int p;
+        cout << "Назва піци: ";
+        cin >> n;
+        cout << "Ціна: ";
+        cin >> p;
+        StandardPizza* sp = new StandardPizza(n, p);
+        int count;
+        cout << "Скільки інгредієнтів? ";
+        cin >> count;
+        for (int i = 0; i < count; i++) {
+            string ing;
+            cout << "Інгредієнт " << i + 1 << ": ";
+            cin >> ing;
+            sp->ingredients.push_back(ing);
+        }
+        menu.push_back(sp);
+    }
+
+    void removePizza() {
+        int id;
+        cout << "Номер для видалення: ";
+        cin >> id;
+        menu.erase(menu.begin() + id - 1);
+    }
+
+    void showMenu() {
+        for (int i = 0; i < menu.size(); i++) {
             cout << i + 1 << ". ";
             menu[i]->show();
         }
     }
 
-    void showIngredients() const {
-        cout << "\n--- ДОСТУПНІ ІНГРЕДІЄНТИ ---" << endl;
-        for (size_t i = 0; i < availableIngredients.size(); i++) {
-            cout << i + 1 << ". " << availableIngredients[i].name 
-                 << " (" << availableIngredients[i].price << " грн)" << endl;
+    void showProducts() {
+        for (int i = 0; i < products.size(); i++) {
+            cout << i + 1 << ". " << products[i].name << " (" << products[i].price << " грн)\n";
         }
     }
 
-    void addIngredientDB() {
-        string name;
-        double price;
-        cout << "Введіть назву інгредієнта: ";
-        cin >> name;
-        cout << "Введіть ціну: ";
-        cin >> price;
-        availableIngredients.push_back({name, price});
-        cout << "Інгредієнт додано!" << endl;
-    }
-
-    void searchByIngredient() const {
-        string searchItem;
-        cout << "Введіть назву інгредієнта для пошуку: ";
-        cin >> searchItem;
-        
-        bool found = false;
-        cout << "\nРезультати пошуку:" << endl;
-        for (const auto& p : menu) {
-            if (p->containsIngredient(searchItem)) {
-                p->show();
-                found = true;
+    void searchPizza() {
+        string q;
+        cout << "Який інгредієнт шукаємо: ";
+        cin >> q;
+        for (int i = 0; i < menu.size(); i++) {
+            for (int j = 0; j < menu[i]->ingredients.size(); j++) {
+                if (menu[i]->ingredients[j] == q) {
+                    menu[i]->show();
+                }
             }
         }
-        if (!found) cout << "Піц з таким інгредієнтом не знайдено." << endl;
     }
 
-    void orderStandardPizza() {
-        showMenu();
-        if (menu.empty()) return;
-        
-        int choice;
-        cout << "Оберіть номер піци для замовлення: ";
-        cin >> choice;
-        
-        if (choice > 0 && choice <= menu.size()) {
-            Pizza* newPizza = new StandardPizza(*dynamic_cast<StandardPizza*>(menu[choice - 1]));
-            order.push_back(newPizza);
-            cout << "Піцу додано до замовлення!" << endl;
-        } else {
-            cout << "Невірний вибір." << endl;
+    void save() {
+        ofstream f("pizza.txt");
+        f << menu.size() << endl;
+        for (int i = 0; i < menu.size(); i++) {
+            f << menu[i]->name << endl;
+            f << menu[i]->price << endl;
+            f << menu[i]->ingredients.size() << endl;
+            for (int j = 0; j < menu[i]->ingredients.size(); j++) {
+                f << menu[i]->ingredients[j] << endl;
+            }
         }
+        f.close();
     }
 
-    void orderCustomPizza() {
+    void load() {
+        ifstream f("pizza.txt");
+        if (!f.is_open()) return;
+        menu.clear();
+        int count;
+        f >> count;
+        for (int i = 0; i < count; i++) {
+            string n;
+            int p, icount;
+            f >> n >> p >> icount;
+            StandardPizza* sp = new StandardPizza(n, p);
+            for (int j = 0; j < icount; j++) {
+                string ing;
+                f >> ing;
+                sp->ingredients.push_back(ing);
+            }
+            menu.push_back(sp);
+        }
+        f.close();
+    }
+
+    void orderStandard() {
+        showMenu();
+        int id;
+        cout << "Оберіть номер піци: ";
+        cin >> id;
+        order.push_back(menu[id - 1]);
+    }
+
+    void orderCustom() {
         CustomPizza* cp = new CustomPizza();
-        int choice = -1;
-        while (choice != 0) {
-            showIngredients();
-            cout << "Оберіть номер інгредієнта (0 - завершити складання): ";
-            cin >> choice;
-            if (choice > 0 && choice <= availableIngredients.size()) {
-                cp->addIngredient(availableIngredients[choice - 1]);
-                cout << "Додано: " << availableIngredients[choice - 1].name << endl;
+        int id = -1;
+        while (id != 0) {
+            showProducts();
+            cout << "Номер продукту (0 - завершити): ";
+            cin >> id;
+            if (id > 0) {
+                cp->addIngredient(products[id - 1]);
             }
         }
         order.push_back(cp);
-        cout << "Кастомну піцу додано до замовлення!" << endl;
     }
 
-    void checkout() {
-        if (order.empty()) {
-            cout << "Ваше замовлення порожнє!" << endl;
-            return;
+    void pay() {
+        int sum = 0;
+        cout << "--- ЧЕК ---\n";
+        for (int i = 0; i < order.size(); i++) {
+            order[i]->show();
+            sum += order[i]->price;
         }
-
-        double totalSum = 0;
-        cout << "\n================ ЧЕК ================" << endl;
-        for (const auto& p : order) {
-            p->show();
-            totalSum += p->getPrice();
-        }
-        cout << "-------------------------------------" << endl;
-        cout << "ДО СПЛАТИ: " << totalSum << " грн" << endl;
-        cout << "=====================================" << endl;
-
-        double payment;
-        cout << "Внесіть суму для оплати: ";
-        cin >> payment;
-
-        if (payment >= totalSum) {
-            cout << "Оплата успішна! Ваша решта: " << payment - totalSum << " грн." << endl;
-            cout << "Смачного!" << endl;
-            for (auto p : order) delete p;
+        cout << "До сплати: " << sum << " грн\n";
+        int money;
+        cout << "Даю гроші: ";
+        cin >> money;
+        if (money >= sum) {
+            cout << "Решта: " << money - sum << " грн\n";
             order.clear();
-        } else {
-            cout << "Недостатньо коштів! Замовлення скасовано." << endl;
-        }
-    }
-
-    void saveMenuToFile(const string& filename) const {
-        ofstream out(filename);
-        if (out.is_open()) {
-            for (const auto& p : menu) {
-                out << p->getName() << "|";
-                vector<Ingredient> ings = p->getIngredients();
-                for (size_t i = 0; i < ings.size(); i++) {
-                    out << ings[i].name << "-" << ings[i].price;
-                    if (i < ings.size() - 1) out << ",";
-                }
-                out << "\n";
-            }
-            out.close();
-            cout << "Меню збережено!" << endl;
-        }
-    }
-
-    void loadMenuFromFile(const string& filename) {
-        ifstream in(filename);
-        if (in.is_open()) {
-            for (auto p : menu) delete p;
-            menu.clear();
-
-            string line;
-            while (getline(in, line)) {
-                stringstream ss(line);
-                string pizzaName, ingsStr;
-                
-                getline(ss, pizzaName, '|');
-                StandardPizza* sp = new StandardPizza(pizzaName);
-                
-                getline(ss, ingsStr);
-                stringstream ssIngs(ingsStr);
-                string ingData;
-                
-                while (getline(ssIngs, ingData, ',')) {
-                    stringstream ssSingle(ingData);
-                    string ingName, ingPriceStr;
-                    getline(ssSingle, ingName, '-');
-                    getline(ssSingle, ingPriceStr);
-                    if (!ingName.empty() && !ingPriceStr.empty()) {
-                        sp->addIngredient({ingName, stod(ingPriceStr)});
-                    }
-                }
-                menu.push_back(sp);
-            }
-            in.close();
-            cout << "Меню завантажено!" << endl;
-        } else {
-            cout << "Файл не знайдено." << endl;
         }
     }
 };
 
 int main() {
-    setlocale(LC_ALL, "Ukrainian");
-
-    Pizzeria myPizzeria;
-
-    StandardPizza* p1 = new StandardPizza("Маргарита");
-    p1->addIngredient({"Сир", 20.0});
-    p1->addIngredient({"Помідори", 10.0});
-    myPizzeria.addPizzaToMenu(p1);
-
-    StandardPizza* p2 = new StandardPizza("М'ясна");
-    p2->addIngredient({"Сир", 20.0});
-    p2->addIngredient({"Ковбаса", 30.0});
-    myPizzeria.addPizzaToMenu(p2);
-
+    system("chcp 1251>nul");
+    Pizzeria pz;
     int choice = -1;
+    
     while (choice != 0) {
-        cout << "\n====== СИСТЕМА ПІЦЕРІЇ ======" << endl;
-        cout << "1. Показати меню піц" << endl;
-        cout << "2. Знайти піцу за інгредієнтом" << endl;
-        cout << "3. Додати новий інгредієнт в базу" << endl;
-        cout << "4. Замовити стандартну піцу" << endl;
-        cout << "5. Зібрати свою піцу (Кастомна)" << endl;
-        cout << "6. Оплатити замовлення (Чек)" << endl;
-        cout << "7. Зберегти меню у файл" << endl;
-        cout << "8. Завантажити меню з файлу" << endl;
-        cout << "0. Вихід" << endl;
-        cout << "Оберіть дію: ";
+        cout << "\n1.Додати піцу  2.Видалити піцу  3.Меню  4.Зберегти  5.Завантажити\n";
+        cout << "6.Додати продукт  7.Видалити продукт  8.Редагувати продукт\n";
+        cout << "9.Пошук  10.Замовити стандартну  11.Замовити кастомну  12.Оплатити  0.Вихід\n";
+        cout << "Вибір: ";
         cin >> choice;
 
-        if (choice == 1) myPizzeria.showMenu();
-        else if (choice == 2) myPizzeria.searchByIngredient();
-        else if (choice == 3) myPizzeria.addIngredientDB();
-        else if (choice == 4) myPizzeria.orderStandardPizza();
-        else if (choice == 5) myPizzeria.orderCustomPizza();
-        else if (choice == 6) myPizzeria.checkout();
-        else if (choice == 7) myPizzeria.saveMenuToFile("pizzeria_db.txt");
-        else if (choice == 8) myPizzeria.loadMenuFromFile("pizzeria_db.txt");
+        if (choice == 1) pz.addPizza();
+        if (choice == 2) pz.removePizza();
+        if (choice == 3) pz.showMenu();
+        if (choice == 4) pz.save();
+        if (choice == 5) pz.load();
+        if (choice == 6) pz.addProduct();
+        if (choice == 7) pz.removeProduct();
+        if (choice == 8) pz.editProduct();
+        if (choice == 9) pz.searchPizza();
+        if (choice == 10) pz.orderStandard();
+        if (choice == 11) pz.orderCustom();
+        if (choice == 12) pz.pay();
     }
-
     return 0;
 }
